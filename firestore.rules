@@ -1,0 +1,420 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email == 'abhisingh7547@gmail.com' &&
+        request.auth.token.email_verified == true;
+    }
+
+    function isWorkspaceOwner(data) {
+      return isSignedIn() && data.ownerId == request.auth.uid;
+    }
+
+    function isWorkspaceMember(data) {
+      return isSignedIn() && (
+        data.ownerId == request.auth.uid ||
+        (data.memberUids is list && request.auth.uid in data.memberUids)
+      );
+    }
+
+    function hasValidMemberList(data) {
+      return data.ownerId is string &&
+        data.ownerId.size() >= 1 &&
+        data.ownerId.size() <= 128 &&
+        data.memberUids is list &&
+        data.memberUids.size() >= 1 &&
+        data.memberUids.size() <= 25 &&
+        data.ownerId in data.memberUids;
+    }
+
+    function hasValidTimestampsOnCreate(data) {
+      return data.createdAt is timestamp &&
+        data.createdAt <= request.time &&
+        data.updatedAt is timestamp &&
+        data.updatedAt <= request.time;
+    }
+
+    function hasValidTimestampsOnUpdate(data) {
+      return data.createdAt == existing().createdAt &&
+        data.updatedAt is timestamp &&
+        data.updatedAt <= request.time;
+    }
+
+    function isValidNumber(val) {
+      return (val is int || val is float) && val >= 0;
+    }
+
+    // --- Entity Validators ---
+
+    function isValidUserProfile(data) {
+      return data.userId is string &&
+        data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.displayName is string &&
+        data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+        data.email is string &&
+        data.email.size() <= 160 &&
+        data.role in ['ADMIN', 'SALES_EXECUTIVE', 'SERVICE_MANAGER', 'MECHANIC'] &&
+        data.dealershipName is string &&
+        data.dealershipName.size() >= 1 && data.dealershipName.size() <= 160;
+    }
+
+    function isValidBikeStock(data) {
+      return hasValidMemberList(data) &&
+        data.modelName is string && data.modelName.size() >= 1 && data.modelName.size() <= 80 &&
+        data.variant is string && data.variant.size() <= 80 &&
+        data.color is string && data.color.size() >= 1 && data.color.size() <= 50 &&
+        data.chassisNumber is string && data.chassisNumber.size() >= 3 && data.chassisNumber.size() <= 40 &&
+        data.engineNumber is string && data.engineNumber.size() >= 3 && data.engineNumber.size() <= 40 &&
+        isValidNumber(data.exShowroomPrice) &&
+        isValidNumber(data.onRoadPrice) &&
+        data.status in ['IN_STOCK', 'RESERVED', 'SOLD'];
+    }
+
+    function isValidSparePart(data) {
+      return hasValidMemberList(data) &&
+        data.partNumber is string && data.partNumber.size() >= 1 && data.partNumber.size() <= 50 &&
+        data.partName is string && data.partName.size() >= 1 && data.partName.size() <= 100 &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 50 &&
+        data.quantity is int && data.quantity >= 0 &&
+        data.minThreshold is int && data.minThreshold >= 0 &&
+        isValidNumber(data.unitPrice);
+    }
+
+    function isValidStaffMember(data) {
+      return hasValidMemberList(data) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 20 &&
+        data.role in ['ADMIN', 'SALES_EXECUTIVE', 'SERVICE_MANAGER', 'MECHANIC'] &&
+        isValidNumber(data.monthlySalary) &&
+        isValidNumber(data.advanceTaken) &&
+        data.monthlyTarget is int && data.monthlyTarget >= 0 &&
+        data.achievedCount is int && data.achievedCount >= 0 &&
+        isValidNumber(data.incentivePerUnit) &&
+        data.isActive is bool;
+    }
+
+    function isValidAttendanceRecord(data) {
+      return hasValidMemberList(data) &&
+        data.staffId is string && data.staffId.size() >= 1 && data.staffId.size() <= 128 &&
+        data.staffName is string && data.staffName.size() >= 1 && data.staffName.size() <= 80 &&
+        data.staffRole is string && data.staffRole.size() >= 1 && data.staffRole.size() <= 40 &&
+        data.dateKey is string && data.dateKey.size() == 10 &&
+        data.checkInTime is string && data.checkInTime.size() >= 1 && data.checkInTime.size() <= 30 &&
+        data.checkOutTime is string && data.checkOutTime.size() <= 30 &&
+        data.status in ['PRESENT', 'CHECKED_OUT', 'HALF_DAY'];
+    }
+
+    function isValidCustomerLead(data) {
+      return hasValidMemberList(data) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 20 &&
+        data.address is string && data.address.size() <= 250 &&
+        data.kycType is string && data.kycType.size() <= 40 &&
+        data.kycNumber is string && data.kycNumber.size() <= 40 &&
+        data.interestedModel is string && data.interestedModel.size() <= 80 &&
+        data.leadStatus in ['INQUIRY', 'TEST_RIDE', 'QUOTATION_SENT', 'CONVERTED'] &&
+        data.testRideDate is string && data.testRideDate.size() <= 30;
+    }
+
+    function isValidSaleRecord(data) {
+      return hasValidMemberList(data) &&
+        data.invoiceNumber is string && data.invoiceNumber.size() >= 1 && data.invoiceNumber.size() <= 40 &&
+        data.gatePassNumber is string && data.gatePassNumber.size() >= 1 && data.gatePassNumber.size() <= 40 &&
+        data.bikeId is string && data.bikeId.size() <= 128 &&
+        data.modelName is string && data.modelName.size() >= 1 && data.modelName.size() <= 80 &&
+        data.chassisNumber is string && data.chassisNumber.size() >= 3 && data.chassisNumber.size() <= 40 &&
+        data.engineNumber is string && data.engineNumber.size() >= 3 && data.engineNumber.size() <= 40 &&
+        data.customerId is string && data.customerId.size() <= 128 &&
+        data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 100 &&
+        data.customerPhone is string && data.customerPhone.size() >= 5 && data.customerPhone.size() <= 20 &&
+        data.salesExecId is string && data.salesExecId.size() <= 128 &&
+        data.salesExecName is string && data.salesExecName.size() <= 80 &&
+        data.paymentMode in ['CASH', 'CHEQUE', 'FINANCE'] &&
+        data.financierName is string && data.financierName.size() <= 80 &&
+        isValidNumber(data.downPayment) &&
+        isValidNumber(data.totalAmount) &&
+        isValidNumber(data.taxableAmount) &&
+        isValidNumber(data.gstAmount) &&
+        data.rtoStatus in ['PENDING', 'APPLIED', 'NUMBER_ALLOTTED'] &&
+        data.insuranceStatus in ['PENDING', 'ISSUED'] &&
+        data.saleDateKey is string && data.saleDateKey.size() == 10;
+    }
+
+    function isValidJobCard(data) {
+      return hasValidMemberList(data) &&
+        data.jobCardNumber is string && data.jobCardNumber.size() >= 1 && data.jobCardNumber.size() <= 40 &&
+        data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 100 &&
+        data.customerPhone is string && data.customerPhone.size() >= 5 && data.customerPhone.size() <= 20 &&
+        data.vehicleModel is string && data.vehicleModel.size() >= 1 && data.vehicleModel.size() <= 80 &&
+        data.registrationNumber is string && data.registrationNumber.size() <= 30 &&
+        data.serviceType in ['FREE_SERVICE', 'PAID_SERVICE', 'ACCIDENTAL_REPAIR'] &&
+        data.issueDescription is string && data.issueDescription.size() >= 1 && data.issueDescription.size() <= 400 &&
+        data.requiredPartsSummary is string && data.requiredPartsSummary.size() <= 300 &&
+        data.mechanicId is string && data.mechanicId.size() <= 128 &&
+        data.mechanicName is string && data.mechanicName.size() <= 80 &&
+        isValidNumber(data.estimatedCost) &&
+        isValidNumber(data.finalCost) &&
+        data.status in ['OPEN', 'IN_PROGRESS', 'READY', 'DELIVERED'] &&
+        data.serviceDateKey is string && data.serviceDateKey.size() == 10;
+    }
+
+    function isValidExpenseRecord(data) {
+      return hasValidMemberList(data) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 50 &&
+        isValidNumber(data.amount) &&
+        data.expenseDateKey is string && data.expenseDateKey.size() == 10;
+    }
+
+    // --- Collection Rules ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isBootstrappedAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isBootstrappedAdmin());
+
+      allow create: if isSignedIn() &&
+        isValidId(userId) &&
+        request.auth.uid == userId &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll(['userId', 'displayName', 'email', 'role', 'dealershipName', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['userId', 'displayName', 'email', 'role', 'dealershipName', 'createdAt', 'updatedAt']) &&
+        hasValidTimestampsOnCreate(incoming()) &&
+        isValidUserProfile(incoming()) &&
+        // Non-bootstrapped users can initialize as ADMIN of their own dealership workspace OR lower role
+        (incoming().role in ['ADMIN', 'SALES_EXECUTIVE', 'SERVICE_MANAGER', 'MECHANIC']);
+
+      allow update: if isSignedIn() &&
+        isValidId(userId) &&
+        (request.auth.uid == userId || isBootstrappedAdmin()) &&
+        isValidUserProfile(incoming()) &&
+        incoming().userId == existing().userId &&
+        hasValidTimestampsOnUpdate(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'dealershipName', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isBootstrappedAdmin());
+    }
+
+    match /bikes/{bikeId} {
+      allow get: if isSignedIn() && isValidId(bikeId) && isWorkspaceMember(existing());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || request.auth.uid in existing().memberUids);
+
+      allow create: if isSignedIn() &&
+        isValidId(bikeId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().keys().hasAll(['ownerId', 'memberUids', 'modelName', 'variant', 'color', 'chassisNumber', 'engineNumber', 'exShowroomPrice', 'onRoadPrice', 'status', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['ownerId', 'memberUids', 'modelName', 'variant', 'color', 'chassisNumber', 'engineNumber', 'exShowroomPrice', 'onRoadPrice', 'status', 'createdAt', 'updatedAt']) &&
+        hasValidTimestampsOnCreate(incoming()) &&
+        isValidBikeStock(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(bikeId) &&
+        isValidBikeStock(incoming()) &&
+        isWorkspaceMember(existing()) &&
+        incoming().ownerId == existing().ownerId &&
+        hasValidTimestampsOnUpdate(incoming()) &&
+        (
+          (isWorkspaceOwner(existing()) && incoming().diff(existing()).affectedKeys().hasOnly(['modelName', 'variant', 'color', 'chassisNumber', 'engineNumber', 'exShowroomPrice', 'onRoadPrice', 'status', 'memberUids', 'updatedAt'])) ||
+          (existing().status != 'SOLD' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+        );
+
+      allow delete: if isSignedIn() && isValidId(bikeId) && isWorkspaceOwner(existing());
+    }
+
+    match /spare_parts/{partId} {
+      allow get: if isSignedIn() && isValidId(partId) && isWorkspaceMember(existing());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || request.auth.uid in existing().memberUids);
+
+      allow create: if isSignedIn() &&
+        isValidId(partId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().keys().hasAll(['ownerId', 'memberUids', 'partNumber', 'partName', 'category', 'quantity', 'minThreshold', 'unitPrice', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['ownerId', 'memberUids', 'partNumber', 'partName', 'category', 'quantity', 'minThreshold', 'unitPrice', 'createdAt', 'updatedAt']) &&
+        hasValidTimestampsOnCreate(incoming()) &&
+        isValidSparePart(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(partId) &&
+        isValidSparePart(incoming()) &&
+        isWorkspaceMember(existing()) &&
+        incoming().ownerId == existing().ownerId &&
+        hasValidTimestampsOnUpdate(incoming()) &&
+        (
+          (isWorkspaceOwner(existing()) && incoming().diff(existing()).affectedKeys().hasOnly(['partNumber', 'partName', 'category', 'quantity', 'minThreshold', 'unitPrice', 'memberUids', 'updatedAt'])) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['quantity', 'updatedAt'])
+        );
+
+      allow delete: if isSignedIn() && isValidId(partId) && isWorkspaceOwner(existing());
+    }
+
+    match /staff/{staffId} {
+      allow get: if isSignedIn() && isValidId(staffId) && isWorkspaceMember(existing());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || request.auth.uid in existing().memberUids);
+
+      allow create: if isSignedIn() &&
+        isValidId(staffId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().keys().hasAll(['ownerId', 'memberUids', 'name', 'phone', 'role', 'monthlySalary', 'advanceTaken', 'monthlyTarget', 'achievedCount', 'incentivePerUnit', 'isActive', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['ownerId', 'memberUids', 'name', 'phone', 'role', 'monthlySalary', 'advanceTaken', 'monthlyTarget', 'achievedCount', 'incentivePerUnit', 'isActive', 'createdAt', 'updatedAt']) &&
+        hasValidTimestampsOnCreate(incoming()) &&
+        isValidStaffMember(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(staffId) &&
+        isValidStaffMember(incoming()) &&
+        isWorkspaceOwner(existing()) &&
+        incoming().ownerId == existing().ownerId &&
+        hasValidTimestampsOnUpdate(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'role', 'monthlySalary', 'advanceTaken', 'monthlyTarget', 'achievedCount', 'incentivePerUnit', 'isActive', 'memberUids', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(staffId) && isWorkspaceOwner(existing());
+    }
+
+    match /attendance/{attendanceId} {
+      allow get: if isSignedIn() && isValidId(attendanceId) && isWorkspaceMember(existing());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || request.auth.uid in existing().memberUids);
+
+      allow create: if isSignedIn() &&
+        isValidId(attendanceId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().keys().hasAll(['ownerId', 'memberUids', 'staffId', 'staffName', 'staffRole', 'dateKey', 'checkInTime', 'checkOutTime', 'status', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['ownerId', 'memberUids', 'staffId', 'staffName', 'staffRole', 'dateKey', 'checkInTime', 'checkOutTime', 'status', 'createdAt', 'updatedAt']) &&
+        hasValidTimestampsOnCreate(incoming()) &&
+        isValidAttendanceRecord(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(attendanceId) &&
+        isValidAttendanceRecord(incoming()) &&
+        isWorkspaceMember(existing()) &&
+        incoming().ownerId == existing().ownerId &&
+        hasValidTimestampsOnUpdate(incoming()) &&
+        (
+          isWorkspaceOwner(existing()) ||
+          existing().status != 'CHECKED_OUT'
+        ) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['checkOutTime', 'status', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(attendanceId) && isWorkspaceOwner(existing());
+    }
+
+    match /customers/{customerId} {
+      allow get: if isSignedIn() && isValidId(customerId) && isWorkspaceMember(existing());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || request.auth.uid in existing().memberUids);
+
+      allow create: if isSignedIn() &&
+        isValidId(customerId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().keys().hasAll(['ownerId', 'memberUids', 'name', 'phone', 'address', 'kycType', 'kycNumber', 'interestedModel', 'leadStatus', 'testRideDate', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['ownerId', 'memberUids', 'name', 'phone', 'address', 'kycType', 'kycNumber', 'interestedModel', 'leadStatus', 'testRideDate', 'createdAt', 'updatedAt']) &&
+        hasValidTimestampsOnCreate(incoming()) &&
+        isValidCustomerLead(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(customerId) &&
+        isValidCustomerLead(incoming()) &&
+        isWorkspaceMember(existing()) &&
+        incoming().ownerId == existing().ownerId &&
+        hasValidTimestampsOnUpdate(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'address', 'kycType', 'kycNumber', 'interestedModel', 'leadStatus', 'testRideDate', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(customerId) && isWorkspaceOwner(existing());
+    }
+
+    match /sales/{saleId} {
+      allow get: if isSignedIn() && isValidId(saleId) && isWorkspaceMember(existing());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || request.auth.uid in existing().memberUids);
+
+      allow create: if isSignedIn() &&
+        isValidId(saleId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().keys().hasAll(['ownerId', 'memberUids', 'invoiceNumber', 'gatePassNumber', 'bikeId', 'modelName', 'chassisNumber', 'engineNumber', 'customerId', 'customerName', 'customerPhone', 'salesExecId', 'salesExecName', 'paymentMode', 'financierName', 'downPayment', 'totalAmount', 'taxableAmount', 'gstAmount', 'rtoStatus', 'insuranceStatus', 'saleDateKey', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['ownerId', 'memberUids', 'invoiceNumber', 'gatePassNumber', 'bikeId', 'modelName', 'chassisNumber', 'engineNumber', 'customerId', 'customerName', 'customerPhone', 'salesExecId', 'salesExecName', 'paymentMode', 'financierName', 'downPayment', 'totalAmount', 'taxableAmount', 'gstAmount', 'rtoStatus', 'insuranceStatus', 'saleDateKey', 'createdAt', 'updatedAt']) &&
+        hasValidTimestampsOnCreate(incoming()) &&
+        isValidSaleRecord(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(saleId) &&
+        isValidSaleRecord(incoming()) &&
+        isWorkspaceMember(existing()) &&
+        incoming().ownerId == existing().ownerId &&
+        hasValidTimestampsOnUpdate(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['rtoStatus', 'insuranceStatus', 'paymentMode', 'financierName', 'downPayment', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(saleId) && isWorkspaceOwner(existing());
+    }
+
+    match /job_cards/{jobId} {
+      allow get: if isSignedIn() && isValidId(jobId) && isWorkspaceMember(existing());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || request.auth.uid in existing().memberUids);
+
+      allow create: if isSignedIn() &&
+        isValidId(jobId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().keys().hasAll(['ownerId', 'memberUids', 'jobCardNumber', 'customerName', 'customerPhone', 'vehicleModel', 'registrationNumber', 'serviceType', 'issueDescription', 'requiredPartsSummary', 'mechanicId', 'mechanicName', 'estimatedCost', 'finalCost', 'status', 'serviceDateKey', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['ownerId', 'memberUids', 'jobCardNumber', 'customerName', 'customerPhone', 'vehicleModel', 'registrationNumber', 'serviceType', 'issueDescription', 'requiredPartsSummary', 'mechanicId', 'mechanicName', 'estimatedCost', 'finalCost', 'status', 'serviceDateKey', 'createdAt', 'updatedAt']) &&
+        hasValidTimestampsOnCreate(incoming()) &&
+        isValidJobCard(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(jobId) &&
+        isValidJobCard(incoming()) &&
+        isWorkspaceMember(existing()) &&
+        incoming().ownerId == existing().ownerId &&
+        hasValidTimestampsOnUpdate(incoming()) &&
+        (
+          isWorkspaceOwner(existing()) ||
+          existing().status != 'DELIVERED'
+        ) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['mechanicId', 'mechanicName', 'requiredPartsSummary', 'estimatedCost', 'finalCost', 'status', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(jobId) && isWorkspaceOwner(existing());
+    }
+
+    match /expenses/{expenseId} {
+      allow get: if isSignedIn() && isValidId(expenseId) && isWorkspaceMember(existing());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || request.auth.uid in existing().memberUids);
+
+      allow create: if isSignedIn() &&
+        isValidId(expenseId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().keys().hasAll(['ownerId', 'memberUids', 'title', 'category', 'amount', 'expenseDateKey', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['ownerId', 'memberUids', 'title', 'category', 'amount', 'expenseDateKey', 'createdAt', 'updatedAt']) &&
+        hasValidTimestampsOnCreate(incoming()) &&
+        isValidExpenseRecord(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(expenseId) &&
+        isValidExpenseRecord(incoming()) &&
+        isWorkspaceOwner(existing()) &&
+        incoming().ownerId == existing().ownerId &&
+        hasValidTimestampsOnUpdate(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'category', 'amount', 'expenseDateKey', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(expenseId) && isWorkspaceOwner(existing());
+    }
+  }
+}

@@ -1,0 +1,339 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated dealership user profile and role assignment.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": {
+          "type": "string",
+          "enum": ["ADMIN", "SALES_EXECUTIVE", "SERVICE_MANAGER", "MECHANIC"]
+        },
+        "dealershipName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "displayName", "email", "role", "dealershipName", "createdAt", "updatedAt"]
+    },
+    "BikeStock": {
+      "title": "BikeStock",
+      "description": "Hero MotoCorp two-wheeler showroom stock item with chassis and engine identifiers.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "modelName": { "type": "string" },
+        "variant": { "type": "string" },
+        "color": { "type": "string" },
+        "chassisNumber": { "type": "string" },
+        "engineNumber": { "type": "string" },
+        "exShowroomPrice": { "type": "number" },
+        "onRoadPrice": { "type": "number" },
+        "status": { "type": "string", "enum": ["IN_STOCK", "RESERVED", "SOLD"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "memberUids",
+        "modelName",
+        "variant",
+        "color",
+        "chassisNumber",
+        "engineNumber",
+        "exShowroomPrice",
+        "onRoadPrice",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SparePart": {
+      "title": "SparePart",
+      "description": "Hero genuine spare part or accessory with low stock alert threshold.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "partNumber": { "type": "string" },
+        "partName": { "type": "string" },
+        "category": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "minThreshold": { "type": "integer" },
+        "unitPrice": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "memberUids",
+        "partNumber",
+        "partName",
+        "category",
+        "quantity",
+        "minThreshold",
+        "unitPrice",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StaffMember": {
+      "title": "StaffMember",
+      "description": "Showroom and workshop staff profile with salary, advance, targets, and incentives.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "SALES_EXECUTIVE", "SERVICE_MANAGER", "MECHANIC"] },
+        "monthlySalary": { "type": "number" },
+        "advanceTaken": { "type": "number" },
+        "monthlyTarget": { "type": "integer" },
+        "achievedCount": { "type": "integer" },
+        "incentivePerUnit": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "memberUids",
+        "name",
+        "phone",
+        "role",
+        "monthlySalary",
+        "advanceTaken",
+        "monthlyTarget",
+        "achievedCount",
+        "incentivePerUnit",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Daily staff digital check-in and check-out record.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "staffId": { "type": "string" },
+        "staffName": { "type": "string" },
+        "staffRole": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "checkInTime": { "type": "string" },
+        "checkOutTime": { "type": "string" },
+        "status": { "type": "string", "enum": ["PRESENT", "CHECKED_OUT", "HALF_DAY"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "memberUids",
+        "staffId",
+        "staffName",
+        "staffRole",
+        "dateKey",
+        "checkInTime",
+        "checkOutTime",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CustomerLead": {
+      "title": "CustomerLead",
+      "description": "Customer CRM profile with KYC details, test ride booking, and inquiry status.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "kycType": { "type": "string" },
+        "kycNumber": { "type": "string" },
+        "interestedModel": { "type": "string" },
+        "leadStatus": { "type": "string", "enum": ["INQUIRY", "TEST_RIDE", "QUOTATION_SENT", "CONVERTED"] },
+        "testRideDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "memberUids",
+        "name",
+        "phone",
+        "address",
+        "kycType",
+        "kycNumber",
+        "interestedModel",
+        "leadStatus",
+        "testRideDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SaleRecord": {
+      "title": "SaleRecord",
+      "description": "Vehicle sale invoice, payment mode, RTO, insurance, and delivery gate pass.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "invoiceNumber": { "type": "string" },
+        "gatePassNumber": { "type": "string" },
+        "bikeId": { "type": "string" },
+        "modelName": { "type": "string" },
+        "chassisNumber": { "type": "string" },
+        "engineNumber": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "salesExecId": { "type": "string" },
+        "salesExecName": { "type": "string" },
+        "paymentMode": { "type": "string", "enum": ["CASH", "CHEQUE", "FINANCE"] },
+        "financierName": { "type": "string" },
+        "downPayment": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "taxableAmount": { "type": "number" },
+        "gstAmount": { "type": "number" },
+        "rtoStatus": { "type": "string", "enum": ["PENDING", "APPLIED", "NUMBER_ALLOTTED"] },
+        "insuranceStatus": { "type": "string", "enum": ["PENDING", "ISSUED"] },
+        "saleDateKey": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "memberUids",
+        "invoiceNumber",
+        "gatePassNumber",
+        "bikeId",
+        "modelName",
+        "chassisNumber",
+        "engineNumber",
+        "customerId",
+        "customerName",
+        "customerPhone",
+        "salesExecId",
+        "salesExecName",
+        "paymentMode",
+        "financierName",
+        "downPayment",
+        "totalAmount",
+        "taxableAmount",
+        "gstAmount",
+        "rtoStatus",
+        "insuranceStatus",
+        "saleDateKey",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "JobCard": {
+      "title": "JobCard",
+      "description": "Workshop service job card for free or paid servicing and mechanic assignment.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "jobCardNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "vehicleModel": { "type": "string" },
+        "registrationNumber": { "type": "string" },
+        "serviceType": { "type": "string", "enum": ["FREE_SERVICE", "PAID_SERVICE", "ACCIDENTAL_REPAIR"] },
+        "issueDescription": { "type": "string" },
+        "requiredPartsSummary": { "type": "string" },
+        "mechanicId": { "type": "string" },
+        "mechanicName": { "type": "string" },
+        "estimatedCost": { "type": "number" },
+        "finalCost": { "type": "number" },
+        "status": { "type": "string", "enum": ["OPEN", "IN_PROGRESS", "READY", "DELIVERED"] },
+        "serviceDateKey": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "memberUids",
+        "jobCardNumber",
+        "customerName",
+        "customerPhone",
+        "vehicleModel",
+        "registrationNumber",
+        "serviceType",
+        "issueDescription",
+        "requiredPartsSummary",
+        "mechanicId",
+        "mechanicName",
+        "estimatedCost",
+        "finalCost",
+        "status",
+        "serviceDateKey",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ExpenseRecord": {
+      "title": "ExpenseRecord",
+      "description": "Showroom and workshop operating expense entry.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "expenseDateKey": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "memberUids", "title", "category", "amount", "expenseDateKey", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Authenticated user profile and dealership role."
+    },
+    "/bikes/{bikeId}": {
+      "schema": { "$ref": "#/entities/BikeStock" },
+      "description": "Showroom two-wheeler inventory."
+    },
+    "/spare_parts/{partId}": {
+      "schema": { "$ref": "#/entities/SparePart" },
+      "description": "Workshop spare parts and accessories inventory."
+    },
+    "/staff/{staffId}": {
+      "schema": { "$ref": "#/entities/StaffMember" },
+      "description": "Dealership staff HR, salary, and target records."
+    },
+    "/attendance/{attendanceId}": {
+      "schema": { "$ref": "#/entities/AttendanceRecord" },
+      "description": "Daily staff attendance check-in/check-out records."
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/CustomerLead" },
+      "description": "Customer CRM profiles, inquiries, and test rides."
+    },
+    "/sales/{saleId}": {
+      "schema": { "$ref": "#/entities/SaleRecord" },
+      "description": "Vehicle sales, invoices, gate passes, RTO, and insurance records."
+    },
+    "/job_cards/{jobId}": {
+      "schema": { "$ref": "#/entities/JobCard" },
+      "description": "Workshop service job cards."
+    },
+    "/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/ExpenseRecord" },
+      "description": "Dealership operating expenses."
+    }
+  }
+}
